@@ -26,13 +26,15 @@ fed by a live MT5 terminal: real bid/ask, real history, bar replay and a full dr
 - 8 instruments: 7 majors + XAUUSD, symbol search (<kbd>Ctrl</kbd>+<kbd>K</kbd>), watchlist
 - Infinite history scroll — drag past the left edge, older bars are fetched in chunks
 - Vertical price panning (pulling the chart up/down unlocks the price scale), `auto` to re-arm
-- Period buttons (`1D 5D 1M 3M 6M YTD 1Y 5Y All`), OHLC legend, countdown, crosshair & magnet modes
+- Period buttons (`1D 5D 1M 3M 6M YTD 1Y 5Y All`), OHLC legend, countdown, crosshair
+- **Hold `Ctrl` for magnet mode** — the crosshair snaps to the candle's open/high/low/close (wick tips)
 - Indicators: EMA 20, EMA 50, SMA 200, Bollinger Bands (20, 2)
 - Measure tool: click → click, reports Δ price, Δ pips, Δ %, bar count and duration
 
 **Drawings** — 12 tools: trend line, ray, horizontal/vertical line, channel, rectangle, arrow, brush,
 text, long/short position, polyline, measure
 - Click a drawing to edit it: **drag an endpoint handle to stretch/rotate**, drag the body to move it
+- **Hold `Shift` while drawing** to lock the angle to horizontal / 45° / vertical
 - Style panel: color, width (1–4 px), style (solid/dashed/dotted), fill, lock, duplicate, delete, bring to front
 - Trend-line alerts, per-symbol storage, drawings survive timeframe and symbol switches
 
@@ -52,6 +54,21 @@ trade history, starting balance $10,000, all in `localStorage`.
 History comes from MT5 automatically. **Switching timeframe or symbol keeps the replay cursor**
 instead of restarting; paper trades fill at the replay price and SL/TP are checked against the
 replayed bar's high/low.
+
+## Keyboard shortcuts
+
+TradingView-style modifiers. Chart keys are ignored while you type in an input field; the same list
+is shown in the app under **Settings → Klaviatura**.
+
+| Keys | Action |
+|---|---|
+| <kbd>Ctrl</kbd> *(hold)* | **Magnet crosshair** — snaps to the nearest open/high/low/close of the hovered candle (i.e. to the wick tip); release for free movement |
+| <kbd>Shift</kbd> *(while drawing)* | Locks the angle to horizontal / 45° / vertical — a trend line comes out perfectly flat or diagonal |
+| <kbd>T</kbd> <kbd>R</kbd> <kbd>H</kbd> <kbd>V</kbd> <kbd>C</kbd> <kbd>B</kbd> <kbd>A</kbd> <kbd>D</kbd> <kbd>X</kbd> <kbd>L</kbd> <kbd>S</kbd> <kbd>P</kbd> | Drawing tools: trend line, ray, horizontal, vertical, channel, rectangle, arrow, brush, text, long, short, polyline |
+| <kbd>Delete</kbd> / <kbd>Backspace</kbd> | Delete the selected drawing |
+| <kbd>Enter</kbd> | Finish a polyline / brush |
+| <kbd>Esc</kbd> | Cancel drawing, clear the measure tool, close dialogs |
+| <kbd>Ctrl</kbd>+<kbd>K</kbd> | Symbol search |
 
 ## Tech stack
 
@@ -148,8 +165,7 @@ start.bat / start.ps1
 |---|---|
 | ![Drawings](docs/img/drawings.png) | ![Long/Short with R/R labels](docs/img/long-short.png) |
 | ![Paper trading](docs/img/trade.png) | ![Bar replay](docs/img/replay.png) |
-
-More: [alerts panel](docs/img/alerts.png).
+| ![Keyboard shortcuts](docs/img/shortcuts.png) | ![Price alerts](docs/img/alerts.png) |
 
 ## End-to-end harnesses
 
@@ -158,6 +174,7 @@ state, drag handles with synthetic mouse events and save screenshots. Start both
 
 ```bash
 node tools/pos.mjs     # long/short tool: auto 1:1, TP/SL/width drags, hover-only labels
+node tools/shortcuts.mjs # Ctrl magnet crosshair (snaps to wick), Shift angle lock, smooth drags
 node tools/edit2.mjs   # every drawing tool: create, edit, reload
 node tools/replay.mjs  # bar replay + multi-timeframe
 ```

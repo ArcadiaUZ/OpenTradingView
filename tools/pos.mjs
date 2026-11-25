@@ -58,6 +58,11 @@ await send("Page.reload", { ignoreCache: true }); await sleep(1200);
 for (let i = 0; i < 140; i++) { if (await ev("document.documentElement.dataset.chartReady==='1'?1:0") === 1) break; await sleep(250); }
 await sleep(3000);
 
+// Narx shkalasini 3x kengaytiramiz: avtomatik 1:1 quti balandligi chartga sig'ishi uchun
+// (aks holda TP/SL tutqichlari ko'rinmaydigan joyga tushib qoladi).
+console.log("ZOOM_PRICE " + await ev("(()=>{const s=window.__series;const r=s.priceScale().getVisibleRange();if(!r)return 'no-range';const mid=(r.from+r.to)/2;const span=(r.to-r.from)*3;s.priceScale().applyOptions({autoScale:false});s.priceScale().setVisibleRange({from:mid-span/2,to:mid+span/2});return 'ok'})()"));
+await sleep(400);
+
 const host = await ev("(()=>{const r=document.querySelector('.chart-host').getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height};})()");
 const P = (fx, fy) => ({ x: Math.round(host.x + host.w * fx), y: Math.round(host.y + host.h * fy) });
 const abs = (h) => ({ x: Math.round(host.x + h.x), y: Math.round(host.y + h.y) });
@@ -65,7 +70,7 @@ const abs = (h) => ({ x: Math.round(host.x + h.x), y: Math.round(host.y + h.y) }
 // ------------------------------------------------------------------ LONG
 console.log("LONG_TOOL " + await toolBtn("long"));
 await sleep(150);
-await clickAt(P(0.35, 0.5).x, P(0.35, 0.5).y);
+await clickAt(P(0.30, 0.5).x, P(0.30, 0.5).y);
 await sleep(400);
 const l0 = await last();
 console.log("LONG_CREATE " + JSON.stringify({ type: l0 && l0.type, points: l0 && l0.points.length, geo: l0 && rr(l0) }));

@@ -85,6 +85,8 @@ MT5 terminal  --MetaTrader5 (python, lokal IPC ~0 ms)-->  backend/feed.py
 | Pastdagi `↔` | real vaqtga qaytish |
 | Chap relda `Kursor` | oddiy crosshair |
 | Chap relda `Crosshair` | magnit crosshair (sham OHLC'ga yopishadi) |
+| **Ctrl** (bosib turish) | magnit crosshair: gorizontal chiziq shamning eng yaqin **OHLC — high/low wick** qiymatiga yopishadi (narx tepasida bo'lsa high, pastda bo'lsa low); qo'yib yuborilsa erkin harakatga qaytadi |
+| **Shift** (chizish paytida) | chiziq burchagini **gorizontal / 45° / vertikal** qulflaydi — trendline "tekis" chiqadi; tutqichni sudraganda ham ishlaydi |
 | Chap relda `O'lchash` | **bos → yurgiz → yana bos** (tortish shart emas, chart surilmaydi): Δ narx, Δ pip, Δ %, shamlar soni, davomiylik, narx A → B |
 | Chizma paneli (chart ustida suzadi, grip bilan ko'chiriladi) | 12 asbob: trend chizig'i, nur, gorizontal/vertikal chiziq, kanal, to'rtburchak, strelka, qalam, matn, long/short pozitsiya, ko'p nuqtali chiziq |
 | Tanlangan chizma paneli (pastda) | nusxa, matnni tahrirlash, qalinlik (1–4px), rang palitrasi, uslub (tekis/shtrix/nuqtali) + to'ldirish, shu narxga alert, qulf, o'chirish, oldinga chiqarish |
@@ -102,6 +104,20 @@ MT5 terminal  --MetaTrader5 (python, lokal IPC ~0 ms)-->  backend/feed.py
 | `MT5` tugmasi | ulanish holati (feed, server vaqti, uptime, instrumentlar) |
 | Pastdagi chap burchakdagi `History` ikonkasi | **Bar Replay** oynasi: sana tanlab o'tmishni bar-bar o'ynatish |
 | Ctrl+K | instrument qidiruv |
+
+## Klaviatura (TradingView uslubida)
+
+| Tugma | Natija |
+|---|---|
+| **Ctrl** (bosib turish) | crosshair narxni eng yaqin OHLC (wick) qiymatiga "magnit" kabi tortadi |
+| **Shift** (chizishda) | burchakni gorizontal / 45° / vertikal qulflaydi |
+| `T` `R` `H` `V` `C` `B` `A` `D` `X` `L` `S` `P` | chizma asboblari (trend, nur, gorizontal, vertikal, kanal, to'rtburchak, strelka, qalam, matn, long, short, polyline) |
+| `Delete` / `Backspace` | tanlangan chizmani o'chirish |
+| `Enter` | ko'p nuqtali chiziq / qalamni tugatish |
+| `Esc` | chizishni bekor qilish, o'lchashni tozalash, oynalarni yopish |
+| **Ctrl+K** | instrument qidirish |
+
+Xuddi shu ro'yxat ilova ichida ham bor: **⚙ Sozlamalar → Klaviatura**.
 
 ## Bar Replay (backtest)
 
@@ -154,6 +170,10 @@ replaydan chiqqanda replay pozitsiyalari oxirgi kursor narxida yopiladi.
       live PnL, tarix, $10 000 boshlang'ich balans, localStorage'da saqlanadi
 - [x] Layout saqlash (avto + `Save`), fullscreen, PNG snapshot, MT5 holat popoveri
 - [x] O'ng reldagi ishlamaydigan tugmalar olib tashlandi
+- [x] TradingView shortcutlari: **Ctrl** — magnit crosshair (OHLC wick), **Shift** — burchak qulfi
+      (gorizontal/45°/vertikal), Delete/Esc/Enter va asbob tugmalari
+- [x] Chizmalarni sudrash silliq: pointermove kadrga (rAF) birlashtirilgan, vaqt uzluksiz
+      (avval long/short pozitsiya bar chegarasiga sakrab siljirdi)
 - [ ] Chizmalar uchun undo/redo va object tree (Fib/XABCD rejaga kirmaydi — kerak emas)
 - [x] Multi-timeframe Bar Replay: MT5 tarixidan avtomatik yuklash, play/pause/step/tezlik/sana,
       TF yoki instrument almashganda kursor saqlanadi (boshidan boshlanmaydi)

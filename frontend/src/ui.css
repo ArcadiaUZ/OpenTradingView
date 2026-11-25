@@ -171,7 +171,7 @@ button.save-group:hover .save-name { color: var(--up); }
 }
 
 .settings-modal {
-  width: 350px;
+  width: 404px;
   background: #0b0e13;
   border: 1px solid var(--border-2);
   border-radius: 8px;
@@ -213,6 +213,46 @@ button.save-group:hover .save-name { color: var(--up); }
   font-size: 10px;
   color: var(--faint);
 }
+
+.settings-keys {
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px solid #101318;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.settings-keys-title {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--dim);
+  margin-bottom: 1px;
+}
+
+.settings-key-row {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  font-size: 11px;
+}
+
+.settings-key {
+  flex: none;
+  width: 110px;
+  white-space: nowrap;
+  padding: 2px 6px;
+  border: 1px solid #262b35;
+  border-radius: 4px;
+  background: #11151c;
+  color: #cfd6e0;
+  font-family: var(--num);
+  font-size: 10px;
+  text-align: center;
+}
+
+.settings-key-hint { color: var(--dim); font-size: 10px; line-height: 14px; }
 
 .switch {
   position: relative;

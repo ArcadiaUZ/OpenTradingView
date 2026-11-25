@@ -18,7 +18,7 @@ import { bollinger, ema, sma, type Point } from "../lib/indicators";
 import type { Bar } from "../lib/types";
 import { openTrade, usePaper } from "../lib/paper";
 import { useTerminal, type ChartType } from "../store";
-import { drawToolDef, useDrawings, type DrawPoint, type Drawing } from "../lib/drawings";
+import { drawToolDef, useDrawings, type DrawPoint, type DrawTool, type Drawing } from "../lib/drawings";
 import { useReplay } from "../lib/replay";
 import { dashFor, fmtDuration, hitTest, makeViewport, measureStats, resolveDrawing, type Prim, type Viewport, type XY } from "../lib/drawGeometry";
 import { autoPositionPoints, computePositionInfo, positionHandles, positionSide, type PositionInfo, type PositionRole } from "../lib/positionTool";
@@ -113,6 +113,8 @@ export default function ChartPanel() {
   const [hoverHandle, setHoverHandle] = useState<{ id: string; index: number } | null>(null);
   /** Kursor Long/Short pozitsiya ustida bo'lsa — shundagina ma'lumot yorliqlari ko'rinadi. */
   const [hoverPosId, setHoverPosId] = useState<string | null>(null);
+  /** TradingView kabi: Ctrl bosib turilganda crosshair narxni OHLC (wick) qiymatiga yopishadi. */
+  const [magnetHeld, setMagnetHeld] = useState(false);
 
   const measureRef = useRef<MeasureState | null>(null);
   const measureDoneRef = useRef(false);
@@ -122,6 +124,12 @@ export default function ChartPanel() {
   const tfSecRef = useRef(60);
   const symbolRef = useRef(symbol);
   const drawingsRef = useRef<Drawing[]>([]);
+  /** Oxirgi hover qilingan sham — bir xil shamda qayta render qilmaslik uchun. */
+  const hoverRef = useRef<Bar | null>(null);
+  /** Sichqonchaning oxirgi holati (Ctrl bosilganda crosshair'ni darhol yangilash uchun). */
+  const pointerRef = useRef<{ x: number; y: number } | null>(null);
+  /** Magnit rejimi (Ctrl) — chizma nuqtalari ham OHLC'ga yopishishi uchun ref. */
+  const magnetRef = useRef(false);
 
   // ---------------------------------------------------------- replay holati
   const replayActive = useReplay((s) => s.active);
@@ -223,11 +231,58 @@ export default function ChartPanel() {
     return viewport;
   }, []);
 
+  /** Oxirgi hisoblangan koordinata holati — o'zgarmagan bo'lsa render qilmaymiz. */
+  const lastViewportRef = useRef<{
+    width: number;
+    height: number;
+    barSpacing: number;
+    priceFrom: number;
+    priceTo: number;
+    logicalFrom: number;
+    logicalTo: number;
+    bars: number;
+    lastTime: number;
+  } | null>(null);
+
   const scheduleDraw = useCallback(() => {
     if (rafRef.current) return;
     rafRef.current = window.requestAnimationFrame(() => {
       rafRef.current = 0;
-      computeViewport();
+      const viewport = computeViewport();
+      if (!viewport) return;
+      const chart = chartRef.current;
+      const series = baseRef.current;
+      const range = series ? series.priceScale().getVisibleRange() : null;
+      const logical = chart ? chart.timeScale().getVisibleLogicalRange() : null;
+      const bars = barsRef.current;
+      const round = (value: number, digits: number) => Math.round(value * Math.pow(10, digits)) / Math.pow(10, digits);
+      const stamp = {
+        width: round(viewport.width, 1),
+        height: round(viewport.height, 1),
+        barSpacing: round(viewport.barSpacing || 0, 2),
+        priceFrom: range ? round(Number(range.from), 6) : 0,
+        priceTo: range ? round(Number(range.to), 6) : 0,
+        logicalFrom: logical ? round(Number(logical.from), 3) : 0,
+        logicalTo: logical ? round(Number(logical.to), 3) : 0,
+        bars: bars.length,
+        lastTime: bars.length ? bars[bars.length - 1].time : 0,
+      };
+      const prev = lastViewportRef.current;
+      lastViewportRef.current = stamp;
+      const same =
+        prev !== null &&
+        prev.width === stamp.width &&
+        prev.height === stamp.height &&
+        prev.barSpacing === stamp.barSpacing &&
+        prev.priceFrom === stamp.priceFrom &&
+        prev.priceTo === stamp.priceTo &&
+        prev.logicalFrom === stamp.logicalFrom &&
+        prev.logicalTo === stamp.logicalTo &&
+        prev.bars === stamp.bars &&
+        prev.lastTime === stamp.lastTime;
+      // Koordinatalar o'zgarmagan (masalan crosshair shunchaki siljigan) — ortiqcha
+      // React render qilmaymiz; shu tufayli sichqoncha harakatida chart qotmaydi.
+      if (same) return;
       setVpVersion((value) => value + 1);
     });
   }, [computeViewport]);
@@ -306,18 +361,35 @@ export default function ChartPanel() {
 
     chart.subscribeCrosshairMove((param) => {
       scheduleDraw();
+      const pushHover = (next: Bar | null) => {
+        const prev = hoverRef.current;
+        if (
+          prev === next ||
+          (prev !== null &&
+            next !== null &&
+            prev.time === next.time &&
+            prev.open === next.open &&
+            prev.high === next.high &&
+            prev.low === next.low &&
+            prev.close === next.close)
+        ) {
+          return;
+        }
+        hoverRef.current = next;
+        setHover(next);
+      };
       if (!param.time || !param.seriesData) {
-        setHover(null);
+        pushHover(null);
         return;
       }
       const base = baseRef.current;
       const raw = base ? (param.seriesData.get(base as any) as any) : null;
       if (raw && raw.open !== undefined) {
-        setHover({ time: Number(param.time), open: raw.open, high: raw.high, low: raw.low, close: raw.close });
+        pushHover({ time: Number(param.time), open: raw.open, high: raw.high, low: raw.low, close: raw.close });
         return;
       }
       const bar = barMapRef.current.get(Number(param.time));
-      setHover(bar || null);
+      pushHover(bar || null);
     });
 
     const onRange = (range: { from: number; to: number } | null) => {
@@ -529,6 +601,7 @@ export default function ChartPanel() {
 
     let drag: {
       id: string;
+      type: DrawTool;
       part: "point" | "body" | "position";
       /** Long/Short pozitsiyasida qaysi tutqich ushlangani. */
       role: PositionRole | null;
@@ -586,12 +659,89 @@ export default function ChartPanel() {
       return Math.round(Date.now() / 1000 / step) * step;
     };
 
+    /**
+     * x -> uzluksiz logical indeks. `timeScale().coordinateToLogical` butun indeksga
+     * yaxlitlaydi (Math.ceil), shu sababli chizma sudralganda vaqt sakrab-sakrab
+     * siljirdi. Bu yerda indeks orasidagi masofani hisoblab uzluksiz qiymat olamiz.
+     */
+    const logicalAt = (x: number): number => {
+      const ts = chart.timeScale();
+      const index = ts.coordinateToLogical(x);
+      if (index === null) return 0;
+      const base = Number(index);
+      const first = ts.logicalToCoordinate(base as unknown as Logical);
+      const second = ts.logicalToCoordinate((base + 1) as unknown as Logical);
+      if (first === null || second === null) return base;
+      const span = Number(second) - Number(first);
+      if (!isFinite(span) || Math.abs(span) < 0.0001) return base;
+      return base + (x - Number(first)) / span;
+    };
+
+    /** Ctrl (magnit) yoqilganda narxni kursordagi shamning eng yaqin OHLC qiymatiga tortadi. */
+    const snapToOhlc = (x: number, price: number): number => {
+      const series = baseRef.current;
+      const list = barsRef.current;
+      if (!series || !list.length) return price;
+      const index = Math.round(logicalAt(x));
+      const bar = list[index];
+      if (!bar) return price;
+      const y = series.priceToCoordinate(price);
+      if (y === null) return price;
+      let best = price;
+      let bestDist = Number.POSITIVE_INFINITY;
+      for (const value of [bar.open, bar.high, bar.low, bar.close]) {
+        const candidate = series.priceToCoordinate(value);
+        if (candidate === null) continue;
+        const distance = Math.abs(Number(candidate) - Number(y));
+        if (distance < bestDist) {
+          bestDist = distance;
+          best = value;
+        }
+      }
+      return best;
+    };
+
     const dataPoint = (x: number, y: number): DrawPoint | null => {
-      const priceValue = priceAt(y);
-      if (priceValue === null || priceValue <= 0) return null;
+      const raw = priceAt(y);
+      if (raw === null || raw <= 0) return null;
+      const priceValue = magnetRef.current ? snapToOhlc(x, raw) : raw;
       const timeValue = timeAt(x);
       if (!isFinite(timeValue)) return null;
       return { time: timeValue, price: Number(priceValue.toPrecision(10)) };
+    };
+
+    /** Burchakni qulflash mumkin bo'lgan asboblar (Shift bosilganda 45° qadamlar). */
+    const angleLockTool = (id: DrawTool | null): boolean =>
+      id === "trendline" || id === "ray" || id === "arrow";
+
+    /**
+     * Shift bosilganda kursorni langar nuqtadan chiqqan 45° (gorizontal/vertikal/
+     * diagonal) yo'nalishga proyeksiya qiladi — TradingView'dagi kabi chiziq
+     * "tekis" gorizontal yoki aniq 45° bo'lib chiziladi.
+     */
+    const angleLockedPoint = (anchor: DrawPoint, x: number, y: number): DrawPoint | null => {
+      const viewport = vpRef.current;
+      if (!viewport) return null;
+      const ax = viewport.timeToX(anchor.time);
+      const ay = viewport.priceToY(anchor.price);
+      const dx = x - ax;
+      const dy = y - ay;
+      const length = Math.hypot(dx, dy);
+      if (length < 4) return null;
+      const quarter = Math.PI / 4;
+      const angle = Math.round(Math.atan2(dy, dx) / quarter) * quarter;
+      const priceValue = priceAt(ay + Math.sin(angle) * length);
+      if (priceValue === null || priceValue <= 0) return null;
+      const timeValue = timeAt(ax + Math.cos(angle) * length);
+      if (!isFinite(timeValue)) return null;
+      return { time: timeValue, price: Number(priceValue.toPrecision(10)) };
+    };
+
+    /** Nuqta qo'shish/sudrash paytida Shift qulfini qo'llaydi. */
+    const draftPoint = (x: number, y: number, event: PointerEvent, anchor: DrawPoint | null): DrawPoint | null => {
+      const base = dataPoint(x, y);
+      if (!base || !event.shiftKey || !anchor) return base;
+      return angleLockedPoint(anchor, x, y) || base;
     };
 
     const finishMulti = (type: "polyline" | "brush") => {
@@ -676,7 +826,10 @@ export default function ChartPanel() {
           return;
         }
 
-        const points = (store.draft || []).concat(value);
+        const draftSoFar = store.draft || [];
+        const locked =
+          angleLockTool(store.tool) && draftSoFar.length ? draftPoint(pos.x, pos.y, event, draftSoFar[0]) : null;
+        const points = draftSoFar.concat(locked || value);
         store.setDraft(points);
         if (points.length >= toolDef.points) {
           const id = store.commit({ type: store.tool, symbol: symbolRef.current, points });
@@ -722,7 +875,7 @@ export default function ChartPanel() {
           host.style.cursor = "";
           return;
         }
-        const logical = chart.timeScale().coordinateToLogical(pos.x);
+        const logical = logicalAt(pos.x);
         let part: "point" | "body" | "position" = hit.part;
         let role: PositionRole | null = null;
         if (positionSide(hit.drawing) !== null) {
@@ -739,6 +892,7 @@ export default function ChartPanel() {
         }
         drag = {
           id: hit.drawing.id,
+          type: hit.drawing.type,
           part,
           role,
           index: hit.index,
@@ -752,7 +906,13 @@ export default function ChartPanel() {
       downAt = { x: pos.x, y: pos.y };
     };
 
-    const onPointerMove = (event: PointerEvent) => {
+    // Sichqoncha 125–1000 Hz da harakatlanganda har bir hodisada React render qilish
+    // chartni qotirardi. Shuning uchun pointermove'ni kadrga (rAF) birlashtiramiz:
+    // har kadrda faqat oxirgi holat qo'llanadi.
+    let pendingMove: PointerEvent | null = null;
+    let moveFrame = 0;
+
+    const handleMove = (event: PointerEvent) => {
       const store = useDrawings.getState();
       if (store.tool) {
         const pos = localPoint(event);
@@ -774,7 +934,10 @@ export default function ChartPanel() {
           return;
         }
         if (store.tool === "brush") return;
-        setPreview(value);
+        const draftSoFar = store.draft || [];
+        const locked =
+          angleLockTool(store.tool) && draftSoFar.length ? draftPoint(clampX, clampY, event, draftSoFar[0]) : null;
+        setPreview(locked || value);
         return;
       }
 
@@ -849,8 +1012,8 @@ export default function ChartPanel() {
       const pos = localPoint(event);
       const priceValue = priceAt(pos.y);
       if (priceValue === null) return;
-      const logical = chart.timeScale().coordinateToLogical(pos.x);
-      const dLogical = (logical === null ? drag.startLogical : Number(logical)) - drag.startLogical;
+      const logical = logicalAt(pos.x);
+      const dLogical = logical - drag.startLogical;
       const step = tfSecRef.current || 60;
       const dTime = Math.round(dLogical * step);
       const dPrice = priceValue - drag.startPrice;
@@ -872,11 +1035,13 @@ export default function ChartPanel() {
           }
         } else if (moving.role === "entry") {
           for (const point of points) {
-            point.time = Math.round((point.time + dTime) / step) * step;
+            // Vaqtni bar chegarasiga yaxlitlamaymiz — pozitsiya kursorni uzluksiz
+            // kuzatadi (avval sakrab-sakrab siljirdi).
+            point.time = Math.round(point.time + dLogical * step);
             point.price += dPrice;
           }
         } else {
-          const maxTime = Math.max(points[0].time + step, Math.round((points[1].time + dLogical * step) / step) * step);
+          const maxTime = Math.max(points[0].time + step, Math.round(points[1].time + dLogical * step));
           points[1].time = maxTime;
           points[2].time = maxTime;
         }
@@ -888,8 +1053,15 @@ export default function ChartPanel() {
       const points = moving.orig.map((item, index) => {
         if (moving.part === "point") {
           if (index !== moving.index) return item;
+          // Shift bosilganda tutqich ham 45° chiziqlarga qulflanadi.
+          if (event.shiftKey && angleLockTool(moving.type)) {
+            const anchor = moving.orig[moving.index === 0 ? 1 : 0];
+            const locked = anchor ? angleLockedPoint(anchor, pos.x, pos.y) : null;
+            if (locked) return { time: Math.round(locked.time), price: locked.price };
+          }
+          // Vaqt uzluksiz (sekund aniqligida) — chiziq silliq siljiydi.
           return {
-            time: Math.round((item.time + dLogical * step) / step) * step,
+            time: Math.round(item.time + dLogical * step),
             price: priceValue,
           };
         }
@@ -898,7 +1070,28 @@ export default function ChartPanel() {
       useDrawings.getState().update(moving.id, { points });
     };
 
+    const flushMove = () => {
+      moveFrame = 0;
+      const event = pendingMove;
+      pendingMove = null;
+      if (event) handleMove(event);
+    };
+
+    const onPointerMove = (event: PointerEvent) => {
+      if (drag) event.preventDefault();
+      pendingMove = event;
+      if (!moveFrame) moveFrame = window.requestAnimationFrame(flushMove);
+    };
+
     const onPointerUp = (event: PointerEvent) => {
+      // Oxirgi harakatni ham qo'llaymiz (aks holda chizma bir kadr orqada qoladi).
+      if (moveFrame) {
+        window.cancelAnimationFrame(moveFrame);
+        moveFrame = 0;
+      }
+      const pending = pendingMove;
+      pendingMove = null;
+      if (pending) handleMove(pending);
       if (drag) {
         drag = null;
         host.style.cursor = "";
@@ -971,6 +1164,9 @@ export default function ChartPanel() {
       window.removeEventListener("pointercancel", onPointerUp, true);
       host.removeEventListener("dblclick", onDoubleClick, true);
       host.removeEventListener("contextmenu", onContextMenu, true);
+      if (moveFrame) window.cancelAnimationFrame(moveFrame);
+      moveFrame = 0;
+      pendingMove = null;
     };
   }, [computeViewport, drawingTool, tool]);
 
@@ -1039,6 +1235,7 @@ export default function ChartPanel() {
     useDrawings.getState().select(null);
     setHoverPosId(null);
     setHoverHandle(null);
+    hoverRef.current = null;
     measureRef.current = null;
     measureDoneRef.current = false;
     setMeasure(null);
@@ -1049,21 +1246,82 @@ export default function ChartPanel() {
   // infinite scroll: walk further into the past when the user drags to the left edge
   // (subscription yuqorida, chart setup ichida)
 
+  useEffect(() => {
+    magnetRef.current = magnetHeld;
+  }, [magnetHeld]);
+
+  useEffect(() => {
+    const track = (event: PointerEvent) => {
+      pointerRef.current = { x: event.clientX, y: event.clientY };
+    };
+    window.addEventListener("pointermove", track, true);
+    return () => window.removeEventListener("pointermove", track, true);
+  }, []);
+
+  // TradingView'dagi kabi: Ctrl bosib turilganda crosshair OHLC (open/high/low/close)
+  // qiymatlariga — ya'ni wick uchlariga ham — "magnit" kabi yopishadi. Qo'yib yuborilsa
+  // crosshair yana erkin harakatlanadi.
+  useEffect(() => {
+    const isTyping = (target: EventTarget | null) => {
+      const el = target as HTMLElement | null;
+      if (!el) return false;
+      const tag = el.tagName;
+      return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || el.isContentEditable;
+    };
+    const onDown = (event: KeyboardEvent) => {
+      if (event.key !== "Control" || isTyping(event.target)) return;
+      setMagnetHeld(true);
+    };
+    const onUp = (event: KeyboardEvent) => {
+      if (event.key !== "Control") return;
+      setMagnetHeld(false);
+    };
+    const release = () => setMagnetHeld(false);
+    window.addEventListener("keydown", onDown);
+    window.addEventListener("keyup", onUp);
+    window.addEventListener("blur", release);
+    return () => {
+      window.removeEventListener("keydown", onDown);
+      window.removeEventListener("keyup", onUp);
+      window.removeEventListener("blur", release);
+    };
+  }, []);
+
   // ------------------------------------------------------------- chart settings
   useEffect(() => {
     const chart = chartRef.current;
     if (!chart) return;
     let mode = CrosshairMode.Normal;
-    if (tool === "crosshair") mode = CrosshairMode.Magnet;
+    if (tool === "crosshair" || magnetHeld) mode = CrosshairMode.MagnetOHLC;
     if (!settings.crosshair) mode = CrosshairMode.Hidden;
-    chart.applyOptions({
-      grid: {
-        vertLines: { visible: settings.grid },
-        horzLines: { visible: settings.grid },
-      },
-      crosshair: { mode },
-    });
-  }, [settings, tool]);
+    try {
+      chart.applyOptions({
+        grid: {
+          vertLines: { visible: settings.grid },
+          horzLines: { visible: settings.grid },
+        },
+        crosshair: { mode },
+      });
+    } catch (err) {
+      /* chart hali tayyor emas */
+    }
+    // Sichqoncha qimirlamasa ham Ctrl bosilishi/qo'yib yuborilishi bilan crosshair
+    // darhol qayta hisoblanadi (TradingView kabi).
+    const point = pointerRef.current;
+    const host = hostRef.current;
+    if (point && host) {
+      const rect = host.getBoundingClientRect();
+      const inside = point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom;
+      if (inside) {
+        const target = document.elementFromPoint(point.x, point.y);
+        if (target && host.contains(target)) {
+          target.dispatchEvent(
+            new MouseEvent("mousemove", { bubbles: true, clientX: point.x, clientY: point.y })
+          );
+        }
+      }
+    }
+  }, [settings, tool, magnetHeld]);
 
   // ---------------------------------------------------------------- data feed
   useEffect(() => {
@@ -1316,21 +1574,34 @@ export default function ChartPanel() {
 
   // --------------------------------------------------------------- render data
   const viewport = vpRef.current;
-  const visibleDrawings = drawings.filter((item) => item.symbol === symbol && !hiddenDrawings);
+  const visibleDrawings = useMemo(
+    () => drawings.filter((item) => item.symbol === symbol && !hiddenDrawings),
+    [drawings, symbol, hiddenDrawings]
+  );
 
   /** Long/Short tool uchun pip/%/R/R/lot/$ yorliqlari. */
-  function positionInfoFor(drawing: Drawing): PositionInfo | null {
-    if (positionSide(drawing) === null) return null;
-    return computePositionInfo(drawing, { price, lots: toolLots, digits });
-  }
+  const positionInfoFor = useCallback(
+    (drawing: Drawing): PositionInfo | null =>
+      positionSide(drawing) === null ? null : computePositionInfo(drawing, { price, lots: toolLots, digits }),
+    [price, toolLots, digits]
+  );
 
-  const shapes = viewport
-    ? visibleDrawings.map((item) => {
-        // Long/Short yorliqlari faqat tanlangan yoki hover qilingan pozitsiyada ko'rinadi.
-        const showLabels = selectedId === item.id || hoverPosId === item.id;
-        return { drawing: item, shape: resolveDrawing(item, viewport, positionInfoFor(item), showLabels) };
-      })
-    : [];
+  /** Chizmalarning ekran shakllari — ortiqcha render'larda qayta hisoblanmaydi. */
+  const shapes = useMemo(
+    () =>
+      viewport
+        ? visibleDrawings.map((item) => {
+            // Long/Short yorliqlari faqat tanlangan yoki hover qilingan pozitsiyada ko'rinadi
+            // va faqat shu holatda hisoblanadi (pip/%/R/R/lot/$).
+            const showLabels = selectedId === item.id || hoverPosId === item.id;
+            return {
+              drawing: item,
+              shape: resolveDrawing(item, viewport, showLabels ? positionInfoFor(item) : null, showLabels),
+            };
+          })
+        : [],
+    [viewport, vpVersion, visibleDrawings, selectedId, hoverPosId, positionInfoFor]
+  );
 
   const draftDrawing = useMemo((): Drawing | null => {
     const activeViewport = vpRef.current;

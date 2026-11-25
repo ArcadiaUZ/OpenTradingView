@@ -40,8 +40,25 @@ export default function SettingsDialog() {
               </button>
             </div>
           ))}
+          <div className="settings-keys">
+            <div className="settings-keys-title">Klaviatura</div>
+            {[
+              ["Ctrl (ushlab)", "Crosshair narxni OHLC — high/low wick — qiymatiga yopishadi"],
+              ["Shift (chizishda)", "Chiziq burchagini gorizontal / 45° / vertikal qulflaydi"],
+              ["T R H V C B A D", "Chizma asboblari (L — long, S — short, X — matn)"],
+              ["Delete", "Tanlangan chizmani o'chirish"],
+              ["Esc", "Chizishni bekor qilish / yopish"],
+              ["Enter", "Ko'p nuqtali chiziqni tugatish"],
+              ["Ctrl+K", "Instrument qidirish"],
+            ].map(([keys, hint]) => (
+              <div className="settings-key-row" key={keys}>
+                <span className="settings-key">{keys}</span>
+                <span className="settings-key-hint">{hint}</span>
+              </div>
+            ))}
+          </div>
         </div>
-        <div className="settings-foot">Ctrl+K — instrument qidirish · Esc — yopish</div>
+        <div className="settings-foot">Maslahat: Ctrl ni bosib turganda crosshair sham oxiriga (wick) yopishadi</div>
       </div>
     </div>
   );
