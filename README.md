@@ -91,6 +91,10 @@ npm install
 npm run dev
 ```
 
+> **Python on PATH:** if `python -c "import MetaTrader5"` fails (on Windows `python` can be the
+> Microsoft Store alias), use the launcher instead: `py -3 -m uvicorn main:app ...`.
+> `start.ps1` picks a working interpreter automatically: `MT5_PYTHON` → `py -3` → `python` → `python3`.
+
 ### Configuration
 
 | Variable | Default | Meaning |

@@ -123,7 +123,13 @@ class Feed:
     # ------------------------------------------------------------ lifecycle
     def start(self) -> bool:
         with self._mt5_lock:
-            if not mt5.initialize(MT5_TERMINAL_PATH or None, timeout=60000):
+            # An explicit terminal path wins; otherwise attach to the running MT5 terminal.
+            ok = (
+                mt5.initialize(MT5_TERMINAL_PATH, timeout=60000)
+                if MT5_TERMINAL_PATH
+                else mt5.initialize(timeout=60000)
+            )
+            if not ok:
                 self.error = "mt5.initialize failed: %s" % (mt5.last_error(),)
                 log.error(self.error)
                 return False

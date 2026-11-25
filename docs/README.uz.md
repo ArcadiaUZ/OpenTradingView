@@ -36,6 +36,10 @@ npm install
 npm run dev
 ```
 
+> **Python haqida:** Windows'da `python` ba'zan Microsoft Store'ning bo'sh alias'i bo'ladi. Agar
+> `python -c "import MetaTrader5"` ishlamasa, `py -3 -m uvicorn main:app ...` ishlatib ko'ring.
+> `start.ps1` o'zi ishlaydigan interpretatorni topadi: `MT5_PYTHON` → `py -3` → `python` → `python3`.
+
 ## Arxitektura
 
 ```
