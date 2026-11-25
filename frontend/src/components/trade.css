@@ -1,0 +1,599 @@
+/* ------------------------------------------------------------------
+   Paper trading panel (demo account, no real orders)
+   Prefix: pp-   ·   mounted once, fixed to the right of the chart
+   ------------------------------------------------------------------ */
+
+.pp-panel {
+  position: fixed;
+  top: 46px;
+  right: 12px;
+  width: 330px;
+  max-height: calc(100vh - 96px);
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--border-2);
+  border-radius: 6px;
+  z-index: 300;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 12px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.65);
+  animation: pp-in 0.14s ease-out;
+}
+
+@keyframes pp-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ------------------------------------------------------------------ head */
+
+.pp-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex: none;
+  padding: 8px 10px;
+  background: #070a0f;
+  border-bottom: 1px solid var(--border);
+}
+
+.pp-head-main { flex: 1; min-width: 0; }
+
+.pp-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  color: var(--text);
+}
+
+.pp-title svg { color: var(--up); flex: none; }
+
+.pp-title-tag {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  line-height: 12px;
+  padding: 0 3px;
+  border-radius: 2px;
+  color: var(--live);
+  border: 1px solid rgba(38, 166, 154, 0.4);
+}
+
+.pp-note {
+  margin-top: 3px;
+  font-size: 9px;
+  line-height: 1.2;
+  color: var(--faint);
+  white-space: nowrap;
+}
+
+.pp-x {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--dim);
+  cursor: pointer;
+}
+
+.pp-x:hover { background: var(--hover); color: var(--text); }
+
+/* ------------------------------------------------------------------ body */
+
+.pp-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.pp-sec {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.pp-sec:last-child { border-bottom: none; }
+
+/* --------------------------------------------------------- account cells */
+
+.pp-acct {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  padding: 1px 0;
+  background: var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.pp-acct-cell {
+  padding: 7px 10px;
+  background: var(--panel);
+  min-width: 0;
+}
+
+.pp-acct-lb {
+  font-size: 8.5px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--dim);
+  white-space: nowrap;
+}
+
+.pp-acct-val {
+  margin-top: 2px;
+  font-family: var(--num);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.pp-gain { color: var(--live); }
+.pp-loss { color: var(--sell); }
+.pp-flat { color: var(--muted); }
+
+/* ---------------------------------------------------------------- ticket */
+
+.pp-instrument {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 7px;
+}
+
+.pp-instrument-sym {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  color: var(--text);
+}
+
+.pp-instrument-state {
+  font-size: 9px;
+  color: var(--faint);
+  white-space: nowrap;
+}
+
+.pp-instrument-state.live { color: var(--live); }
+
+.pp-quote {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.pp-quote-cell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+  padding: 5px 7px;
+  background: #070a0f;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.pp-quote-lb {
+  font-size: 8.5px;
+  letter-spacing: 0.6px;
+  color: var(--dim);
+}
+
+.pp-quote-val {
+  font-family: var(--num);
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.pp-quote-val.sell { color: var(--sell); }
+.pp-quote-val.buy { color: var(--buy); }
+
+.pp-field { margin-bottom: 8px; }
+
+.pp-lb {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 3px;
+  font-size: 8.5px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.pp-step {
+  display: flex;
+  align-items: stretch;
+  height: 30px;
+  background: #070a0f;
+  border: 1px solid var(--border-2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.pp-step-btn {
+  flex: none;
+  width: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.pp-step-btn:hover { background: var(--hover); color: var(--text); }
+.pp-step-btn:active { background: var(--active); }
+
+.pp-step-input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  background: transparent;
+  border: none;
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  outline: none;
+  color: var(--text);
+  font-family: var(--num);
+  font-size: 13px;
+  text-align: center;
+}
+
+.pp-levels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.pp-levels .pp-field { margin-bottom: 0; }
+
+.pp-input {
+  width: 100%;
+  height: 30px;
+  padding: 0 7px;
+  background: #070a0f;
+  border: 1px solid var(--border-2);
+  border-radius: 4px;
+  outline: none;
+  color: var(--text);
+  font-family: var(--num);
+  font-size: 12px;
+}
+
+.pp-input:focus { border-color: #3b4354; }
+
+.pp-input::placeholder {
+  color: var(--faint);
+  font-family: inherit;
+  font-size: 10px;
+}
+
+.pp-error {
+  margin: -2px 0 6px;
+  font-size: 10px;
+  line-height: 1.35;
+  color: var(--sell);
+}
+
+.pp-hint {
+  margin-bottom: 6px;
+  font-size: 9px;
+  color: var(--faint);
+  white-space: nowrap;
+}
+
+.pp-hint b { color: var(--muted); font-weight: 600; }
+
+.pp-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.pp-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  height: 46px;
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  cursor: pointer;
+  transition: filter 0.12s ease;
+}
+
+.pp-action.sell { background: var(--sell); }
+.pp-action.buy { background: var(--buy); }
+
+.pp-action:hover:not(:disabled) { filter: brightness(1.12); }
+.pp-action:active:not(:disabled) { transform: translateY(1px); }
+
+.pp-action.selected {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.pp-action:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  filter: grayscale(0.25);
+}
+
+.pp-action-lb {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.7px;
+}
+
+.pp-action-px {
+  font-family: var(--num);
+  font-size: 11px;
+  font-weight: 500;
+  opacity: 0.9;
+}
+
+/* ------------------------------------------------------------- positions */
+
+.pp-sec-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.pp-sec-title {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  color: var(--dim);
+  white-space: nowrap;
+}
+
+.pp-link {
+  padding: 0;
+  background: none;
+  border: none;
+  font-size: 10px;
+  color: var(--up);
+  cursor: pointer;
+}
+
+.pp-link:hover:not(:disabled) { text-decoration: underline; }
+
+.pp-link:disabled {
+  color: var(--faint);
+  cursor: default;
+}
+
+.pp-empty {
+  padding: 2px 0 4px;
+  font-size: 10px;
+  line-height: 1.35;
+  color: var(--faint);
+}
+
+.pp-pos-list {
+  max-height: 214px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.pp-pos {
+  padding: 6px 0 5px;
+  border-top: 1px solid var(--border);
+}
+
+.pp-pos-main {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.pp-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  height: 15px;
+  padding: 0 4px;
+  border-radius: 3px;
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+
+.pp-badge.buy {
+  color: #8fb1ff;
+  background: rgba(41, 98, 255, 0.18);
+}
+
+.pp-badge.sell {
+  color: #ff9693;
+  background: rgba(239, 83, 80, 0.16);
+}
+
+.pp-pos-sym {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.pp-pos-lots {
+  font-family: var(--num);
+  font-size: 10px;
+  color: var(--dim);
+  white-space: nowrap;
+}
+
+.pp-pos-pnl {
+  margin-left: auto;
+  font-family: var(--num);
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.pp-pos-x {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 3px;
+  color: var(--faint);
+  cursor: pointer;
+}
+
+.pp-pos-x:hover:not(:disabled) { background: var(--hover); color: var(--text); }
+.pp-pos-x:disabled { opacity: 0.35; cursor: default; }
+
+.pp-pos-sub {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  margin-top: 2px;
+  font-family: var(--num);
+  font-size: 9px;
+  color: var(--faint);
+}
+
+/* --------------------------------------------------------------- history */
+
+.pp-hist-list {
+  max-height: 170px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.pp-hist-row {
+  display: grid;
+  grid-template-columns: 32px 40px 1fr auto;
+  align-items: center;
+  gap: 4px 6px;
+  padding: 5px 0;
+  border-top: 1px solid var(--border);
+}
+
+.pp-hist-time {
+  font-family: var(--num);
+  font-size: 9.5px;
+  color: var(--dim);
+  white-space: nowrap;
+}
+
+.pp-hist-sym {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pp-hist-pnl {
+  font-family: var(--num);
+  font-size: 10.5px;
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.pp-hist-sub {
+  grid-column: 1 / -1;
+  font-family: var(--num);
+  font-size: 9px;
+  color: var(--faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ------------------------------------------------------------------ foot */
+
+.pp-foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  border-top: 1px solid var(--border);
+  background: #070a0f;
+}
+
+.pp-reset {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 8px;
+  background: transparent;
+  border: 1px solid var(--border-2);
+  border-radius: 4px;
+  color: var(--muted);
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.pp-reset:hover { background: var(--hover); color: var(--text); }
+.pp-reset:active { background: var(--active); }
+
+.pp-foot-note {
+  font-size: 9px;
+  color: var(--faint);
+  white-space: nowrap;
+}
+
+/* ----------------------------------------------------------------- replay */
+
+/* Header'da "DEMO" yonidagi kichik ko'k REPLAY belgisi. */
+.pp-replay-tag {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  line-height: 12px;
+  padding: 0 3px;
+  border-radius: 2px;
+  text-transform: uppercase;
+  color: #8ecbff;
+  border: 1px solid #2b4a6b;
+  background: rgba(43, 74, 107, 0.22);
+}
+
+/* Replay faol bo'lganda jonli "live · 0.3s" o'rnida kursor vaqti ko'rsatiladi. */
+.pp-instrument-state.replay {
+  color: var(--live);
+}
+
+@media (max-width: 420px) {
+  .pp-panel {
+    right: 8px;
+    width: calc(100vw - 16px);
+  }
+}

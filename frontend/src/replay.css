@@ -1,0 +1,489 @@
+/* ------------------------------------------------------------------ replay */
+/* Bar replay: boshlash dialogi (ReplayPanel) va faol boshqaruv pilli        */
+/* (ReplayControls). TradingView dark uslubiga mos; ranglar global.css'dagi   */
+/* o'zgaruvchilar bilan uyg'un. Barcha klasslar .replay- prefiksli.           */
+
+/* ============================================================== start dialog */
+.replay-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 520;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 12vh;
+  background: rgba(3, 5, 8, 0.72);
+}
+
+.replay-card {
+  width: 470px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 24vh);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: #0f141b;
+  border: 1px solid #262b35;
+  border-radius: 10px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.75);
+  color: #f2f2f2;
+  font-size: 12px;
+}
+
+.replay-card button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.replay-card button:focus-visible,
+.replay-controls button:focus-visible {
+  outline: 1px solid #1e90ff;
+  outline-offset: 1px;
+}
+
+.replay-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.replay-title {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  color: #f2f2f2;
+}
+
+.replay-close {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: #8b93a1;
+}
+
+.replay-close:hover {
+  background: #1a1f27;
+  color: #fff;
+}
+
+.replay-note {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.55;
+  color: #8b93a1;
+}
+
+.replay-instrument {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 9px;
+  background: #0a0e14;
+  border: 1px solid #262b35;
+  border-radius: 5px;
+  color: #dfe6ef;
+  font-family: var(--num);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.replay-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.replay-preset {
+  height: 32px;
+  padding: 0 11px;
+  background: #151a22;
+  border: 1px solid #262b35;
+  border-radius: 6px;
+  color: #b8bfc9;
+  font-size: 11px;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+
+.replay-preset:hover {
+  background: #1a1f27;
+  color: #fff;
+}
+
+.replay-preset.active {
+  background: rgba(30, 144, 255, 0.14);
+  border-color: #1e90ff;
+  color: #6cb6ff;
+}
+
+.replay-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.replay-label {
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #787b86;
+}
+
+.replay-datetime {
+  width: 100%;
+  height: 32px;
+  padding: 0 9px;
+  background: #0a0c10;
+  border: 1px solid #262b35;
+  border-radius: 5px;
+  color: #f2f2f2;
+  font-family: var(--num);
+  font-size: 12px;
+  outline: none;
+  color-scheme: dark;
+}
+
+.replay-datetime:focus {
+  border-color: #1e90ff;
+}
+
+.replay-datetime::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.55;
+}
+
+.replay-datetime::-webkit-calendar-picker-indicator:hover {
+  opacity: 0.9;
+}
+
+.replay-error {
+  padding: 7px 9px;
+  background: rgba(239, 83, 80, 0.08);
+  border: 1px solid rgba(239, 83, 80, 0.3);
+  border-radius: 5px;
+  color: #ef5350;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.replay-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 2px;
+}
+
+.replay-hint {
+  min-width: 0;
+  overflow: hidden;
+  color: #5b5f6a;
+  font-size: 10px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.replay-start {
+  flex: none;
+  height: 32px;
+  padding: 0 16px;
+  background: #1e90ff;
+  border: 1px solid #1e90ff;
+  border-radius: 6px;
+  color: #04101d;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+
+.replay-start:hover:not(:disabled) {
+  background: #3aa0ff;
+  border-color: #3aa0ff;
+}
+
+.replay-start:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* ================================================================= controls */
+.replay-controls {
+  position: fixed;
+  left: 50%;
+  /* Toast (bottom: 42px) va bottom bar bilan ustma-ust tushmasin. */
+  bottom: 86px;
+  transform: translateX(-50%);
+  z-index: 320;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 40px;
+  padding: 4px 8px;
+  background: #0d1117;
+  border: 1px solid #262b35;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  color: #dfe6ef;
+  font-size: 12px;
+  user-select: none;
+}
+
+.replay-controls button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.replay-symbol {
+  max-width: 120px;
+  padding: 0 4px;
+  overflow: hidden;
+  color: #f2f2f2;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.replay-clock {
+  padding: 0 2px;
+  color: #dfe6ef;
+  font-family: var(--num);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.replay-live {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  margin: 0 1px;
+  border-radius: 50%;
+  background: #26a69a;
+  box-shadow: 0 0 7px rgba(38, 166, 154, 0.9);
+  animation: replay-pulse 1.3s ease-in-out infinite;
+}
+
+.replay-sep {
+  width: 1px;
+  height: 18px;
+  flex: none;
+  margin: 0 3px;
+  background: #222731;
+}
+
+.replay-btn {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: #9aa3b0;
+  transition: background 0.1s ease, color 0.1s ease;
+}
+
+.replay-btn:hover {
+  background: #1a1f27;
+  color: #fff;
+}
+
+.replay-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+  background: transparent;
+}
+
+.replay-play,
+.replay-btn.replay-play {
+  background: #1e90ff;
+  color: #04101d;
+}
+
+.replay-play:hover,
+.replay-btn.replay-play:hover {
+  background: #3aa0ff;
+  color: #04101d;
+}
+
+.replay-play.on {
+  box-shadow: inset 0 0 0 1px rgba(4, 16, 29, 0.35);
+}
+
+.replay-speed {
+  width: auto;
+  min-width: 56px;
+  gap: 4px;
+  padding: 0 6px;
+  color: #c8d1dc;
+}
+
+.replay-speed svg {
+  flex: none;
+}
+
+.replay-speed-value {
+  font-family: var(--num);
+  font-size: 11px;
+  line-height: 1;
+}
+
+.replay-exit:hover {
+  background: #2a1519;
+  color: #ef5350;
+}
+
+.replay-loading {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 4px;
+  color: #8b93a1;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.replay-spinner {
+  width: 11px;
+  height: 11px;
+  flex: none;
+  border: 1.5px solid #2a3140;
+  border-top-color: #1e90ff;
+  border-radius: 50%;
+  animation: replay-spin 0.7s linear infinite;
+}
+
+/* --- tezlik menyusi / sana paneli (yuqoriga ochiladi) --- */
+.replay-menu {
+  position: absolute;
+  bottom: 44px;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 96px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px;
+  background: #11161f;
+  border: 1px solid #2a3140;
+  border-radius: 6px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.65);
+  z-index: 330;
+}
+
+.replay-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 5px 8px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: #b8bfc9;
+  font-family: var(--num);
+  font-size: 11px;
+  text-align: left;
+}
+
+.replay-menu-item:hover {
+  background: #1a1f27;
+  color: #fff;
+}
+
+.replay-menu-item.active {
+  background: rgba(30, 144, 255, 0.14);
+  color: #6cb6ff;
+}
+
+.replay-check {
+  color: #1e90ff;
+  font-size: 10px;
+  line-height: 1;
+}
+
+.replay-jump-pop {
+  position: absolute;
+  bottom: 44px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  background: #11161f;
+  border: 1px solid #2a3140;
+  border-radius: 6px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.65);
+  z-index: 330;
+}
+
+.replay-jump-input {
+  width: 168px;
+  height: 28px;
+  padding: 0 8px;
+  background: #0a0c10;
+  border: 1px solid #2a3140;
+  border-radius: 4px;
+  color: #f2f2f2;
+  font-family: var(--num);
+  font-size: 11px;
+  outline: none;
+  color-scheme: dark;
+}
+
+.replay-jump-input:focus {
+  border-color: #1e90ff;
+}
+
+.replay-jump-go {
+  height: 28px;
+  padding: 0 10px;
+  background: #1e90ff;
+  border: none;
+  border-radius: 4px;
+  color: #04101d;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.replay-jump-go:hover {
+  background: #3aa0ff;
+}
+
+@keyframes replay-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes replay-pulse {
+  0%,
+  100% {
+    opacity: 0.7;
+    box-shadow: 0 0 4px rgba(38, 166, 154, 0.55);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 9px rgba(38, 166, 154, 1);
+  }
+}
